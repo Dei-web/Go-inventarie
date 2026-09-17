@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Dei-web/Go-inventarie/internal/middleware/auth"
+	"github.com/Dei-web/Go-inventarie/internal/models"
 	"github.com/Dei-web/Go-inventarie/internal/types"
 )
 
@@ -42,7 +43,7 @@ func (s *Service) Create(ctx context.Context, req *types.UsersCreate) (*types.Re
 		return nil, err
 	}
 
-	user := &types.Users{
+	user := &models.Users{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: hashed,

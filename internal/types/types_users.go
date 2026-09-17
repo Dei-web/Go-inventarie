@@ -1,12 +1,5 @@
 package types
 
-type Users struct {
-	ID       uint   `json:"id"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"-"`
-}
-
 type ResponseData struct {
 	ID    uint   `json:"id"`
 	Name  string `json:"name"`

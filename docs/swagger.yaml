@@ -1,0 +1,213 @@
+basePath: /
+definitions:
+  httperr.HTTPError:
+    properties:
+      code:
+        type: integer
+      details:
+        type: string
+      message:
+        type: string
+    type: object
+  types.ResponseData:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  types.UsersCreate:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  types.UsersUpdate:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API CRUD para gestión de usuarios
+  title: Go Inventarie API
+  version: "1.0"
+paths:
+  /users:
+    get:
+      description: Retorna la lista de todos los usuarios
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/types.ResponseData'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+      summary: Obtener todos los usuarios
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Crea un nuevo usuario
+      parameters:
+      - description: Datos del usuario
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/types.UsersCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/types.ResponseData'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+      summary: Crear un usuario
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Elimina un usuario por su ID
+      parameters:
+      - description: ID del usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+      security:
+      - ApiKeyAuth: []
+      summary: Eliminar un usuario
+      tags:
+      - users
+    get:
+      description: Retorna un usuario por su ID
+      parameters:
+      - description: ID del usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ResponseData'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+      summary: Obtener un usuario
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Actualiza un usuario por su ID
+      parameters:
+      - description: ID del usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Datos a actualizar
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/types.UsersUpdate'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+      security:
+      - ApiKeyAuth: []
+      summary: Actualizar un usuario
+      tags:
+      - users
+schemes:
+- http
+swagger: "2.0"

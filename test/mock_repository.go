@@ -3,12 +3,12 @@ package test
 import (
 	"context"
 
-	"github.com/Dei-web/Go-inventarie/internal/types"
+	"github.com/Dei-web/Go-inventarie/internal/models"
 	"github.com/Dei-web/Go-inventarie/internal/services/user"
 )
 
 type MockRepository struct {
-	users     []types.Users
+	users     []models.Users
 	nextID    uint
 	getErr    error
 	createErr error
@@ -18,7 +18,7 @@ type MockRepository struct {
 
 func NewMockRepository() *MockRepository {
 	return &MockRepository{
-		users:  []types.Users{},
+		users:  []models.Users{},
 		nextID: 1,
 	}
 }
@@ -39,14 +39,14 @@ func (m *MockRepository) SetDeleteError(err error) {
 	m.deleteErr = err
 }
 
-func (m *MockRepository) GetAll(ctx context.Context) ([]types.Users, error) {
+func (m *MockRepository) GetAll(ctx context.Context) ([]models.Users, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
 	return m.users, nil
 }
 
-func (m *MockRepository) GetByID(ctx context.Context, id int64) (*types.Users, error) {
+func (m *MockRepository) GetByID(ctx context.Context, id int64) (*models.Users, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -58,7 +58,7 @@ func (m *MockRepository) GetByID(ctx context.Context, id int64) (*types.Users, e
 	return nil, user.ErrUserNotFound
 }
 
-func (m *MockRepository) Create(ctx context.Context, user *types.Users) error {
+func (m *MockRepository) Create(ctx context.Context, user *models.Users) error {
 	if m.createErr != nil {
 		return m.createErr
 	}

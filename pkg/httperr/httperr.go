@@ -5,6 +5,12 @@ import (
 	"net/http"
 )
 
+type HTTPError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Details string `json:"details,omitempty"`
+}
+
 type Response struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`

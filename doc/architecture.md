@@ -14,10 +14,16 @@ internal/
     errors.go                      Errores sentinel del paquete config
 
   db/
-    config.go                      Conexión a PostgreSQL con GORM + AutoMigrate
+    config.go                      Conexión a PostgreSQL con GORM
+    migrate.go                     Lógica de migración automática con logging
+
+  models/
+    base.go                        Modelo base con ID, CreatedAt, UpdatedAt
+    users.go                       Modelo de DB para la tabla users
+    registry.go                    Registro de todos los modelos a migrar
 
   types/
-    types_users.go                 Modelos: Users, UsersCreate, UsersUpdate, ResponseData
+    types_users.go                 DTOs: UsersCreate, UsersUpdate, ResponseData
 
   middleware/
     logging.go                     Middleware que loggea método, path, status y duración
@@ -136,14 +142,20 @@ Antes: `Store.CreateUser` llamaba a `auth.HashPassword`. La capa de datos sabía
 
 Ahora: `Service.Create` hashea el password y luego le pasa el `User` ya hasheado al Store.
 
-### 4.4 Los tipos se organizaron y protegieron
-Antes: Un solo struct `Users` servía para todo (modelo DB, request, response). El password se exponía en las respuestas.
+### 4.4 Separación de modelos de DB y DTOs
+Antes: Un solo struct `Users` en `types/` servía para todo (modelo DB, request, response). El password se exponía en las respuestas.
 
-Ahora hay tipos distintos para cada propósito, todos en `internal/types/types_users.go`:
-- `types.Users` → modelo de dominio (lo que vive en la DB). Password con `json:"-"` para que nunca se serialice.
+Ahora hay una separación clara:
+
+**Modelos de DB** (en `internal/models/`):
+- `models.Users` → modelo de base de datos con GORM tags, embebe `Base` (ID, CreatedAt, UpdatedAt). Nunca se serializa directamente a JSON.
+
+**DTOs de API** (en `internal/types/`):
 - `types.UsersCreate` → lo que el cliente envía para crear un usuario (con tags de validación).
 - `types.UsersUpdate` → lo que el cliente envía para actualizar (incluye campo `Password` opcional).
 - `types.ResponseData` → lo que se le devuelve al cliente (sin password).
+
+Esto permite que el modelo de DB tenga campos que no deben exponerse (como `Password`, `CreatedAt`, `UpdatedAt`) mientras los DTOs solo contienen lo necesario para la API.
 
 ### 4.5 Errores estructurados
 Antes: `http.Error(w, "error al traer usuarios", 500)` → texto plano, mezcla de idiomas.
@@ -165,10 +177,21 @@ Antes: `http.ListenAndServe` se mataba abruptamente con Ctrl+C.
 
 Ahora: El servidor escucha señales SIGINT/SIGTERM y hace un shutdown elegante, terminando requests en curso antes de cerrar.
 
-### 4.9 AutoMigrate
-Antes: Las tablas de la DB se tenían que crear manualmente.
+### 4.9 Sistema de migraciones con GORM AutoMigrate
+Antes: Las tablas de la DB se tenían que crear manualmente. No había logging de qué se migraba.
 
-Ahora: GORM crea/actualiza las tablas automáticamente al arrancar basándose en el struct `Users`.
+Ahora: 
+- Sistema de migración automática con logging detallado (`internal/db/migrate.go`)
+- Registro centralizado de modelos (`internal/models/registry.go`)
+- Itera sobre todos los modelos registrados y los migra automáticamente al arrancar
+- Logs claros de qué modelo se está migrando y si hubo éxito o error
+- Timestamps automáticos (CreatedAt, UpdatedAt) en todos los modelos via `models.Base`
+
+Para agregar un nuevo modelo:
+1. Crear archivo en `internal/models/` (ej: `products.go`)
+2. Definir el struct embebiendo `Base`
+3. Agregar el modelo al slice `Models` en `registry.go`
+4. GORM lo migra automáticamente al arrancar
 
 ### 4.10 Configuración ampliada
 Antes: Solo `URLDATABASE`. Puerto hardcodeado en `:8080`.
@@ -225,3 +248,101 @@ go test ./test/ -run TestDatabaseConnection
 | `PORT` | Puerto del servidor HTTP | `8080` |
 | `JWT_SECRET` | Secreto para firmar tokens JWT | *(obligatoria)* |
 | `ENVIRONMENT` | Entorno (`development`, `production`) | `development` |
+
+---
+
+## 8. Cómo agregar un nuevo modelo de DB
+
+Ejemplo: agregar un modelo `Products`
+
+### Paso 1: Crear el modelo en `internal/models/products.go`
+
+```go
+package models
+
+type Products struct {
+    Base
+    Name        string  `gorm:"size:255;not null"`
+    Description string  `gorm:"type:text"`
+    Price       float64 `gorm:"not null"`
+    Stock       int     `gorm:"not null;default:0"`
+}
+
+func (Products) TableName() string {
+    return "products"
+}
+```
+
+### Paso 2: Crear los DTOs en `internal/types/types_products.go`
+
+```go
+package types
+
+type ProductsCreate struct {
+    Name        string  `json:"name"        validate:"required,min=2,max=255"`
+    Description string  `json:"description" validate:"omitempty"`
+    Price       float64 `json:"price"       validate:"required,gt=0"`
+    Stock       int     `json:"stock"       validate:"required,gte=0"`
+}
+
+type ProductsUpdate struct {
+    Name        string  `json:"name"        validate:"omitempty,min=2,max=255"`
+    Description string  `json:"description" validate:"omitempty"`
+    Price       float64 `json:"price"       validate:"omitempty,gt=0"`
+    Stock       int     `json:"stock"       validate:"omitempty,gte=0"`
+}
+
+type ProductsResponse struct {
+    ID          uint    `json:"id"`
+    Name        string  `json:"name"`
+    Description string  `json:"description"`
+    Price       float64 `json:"price"`
+    Stock       int     `json:"stock"`
+    CreatedAt   string  `json:"created_at"`
+    UpdatedAt   string  `json:"updated_at"`
+}
+```
+
+### Paso 3: Registrar el modelo en `internal/models/registry.go`
+
+```go
+package models
+
+var Models = []interface{}{
+    &Users{},
+    &Products{},
+}
+```
+
+### Paso 4: Crear el módulo de servicios en `internal/services/products/`
+
+Seguir la misma estructura que `user/`:
+- `repository.go` → interfaz Repository
+- `store.go` → implementación con GORM
+- `logic.go` → lógica de negocio
+- `handler.go` → handlers HTTP
+- `routes.go` → registro de rutas
+- `errors.go` → errores del dominio
+
+### Paso 5: Registrar las rutas en `cmd/api/server.go`
+
+```go
+import "github.com/Dei-web/Go-inventarie/internal/services/products"
+
+// En la función Run():
+productStore := products.NewStore(s.db)
+productService := products.NewService(productStore)
+productHandler := products.NewHandler(productService)
+
+products.RegisterRoutes(mux, productHandler)
+```
+
+Al arrancar la aplicación, verás en los logs:
+```
+Starting database migration...
+Migrating model: Users
+✓ Users migrated successfully
+Migrating model: Products
+✓ Products migrated successfully
+Database migration completed successfully
+```

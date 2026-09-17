@@ -8,6 +8,13 @@ import (
 	"github.com/Dei-web/Go-inventarie/internal/db"
 )
 
+// @title           Go Inventarie API
+// @version         1.0
+// @description     API CRUD para gestión de usuarios
+// @host            localhost:8080
+// @BasePath        /
+// @schemes         http
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {

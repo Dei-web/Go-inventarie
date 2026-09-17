@@ -8,8 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Dei-web/Go-inventarie/internal/types"
+	"github.com/Dei-web/Go-inventarie/internal/models"
 	"github.com/Dei-web/Go-inventarie/internal/services/user"
+	"github.com/Dei-web/Go-inventarie/internal/types"
 )
 
 func setupHandler() (*user.Handler, *MockRepository) {
@@ -86,7 +87,7 @@ func TestHandlerCreateUserValidationFails(t *testing.T) {
 func TestHandlerGetUsers(t *testing.T) {
 	h, repo := setupHandler()
 
-	repo.Create(context.Background(), &types.Users{Name: "User 1", Email: "u1@test.com", Password: "hashed"})
+	repo.Create(context.Background(), &models.Users{Name: "User 1", Email: "u1@test.com", Password: "hashed"})
 
 	svc := user.NewService(repo)
 	svc.Create(context.Background(), &types.UsersCreate{Name: "User 2", Email: "u2@test.com", Password: "pass12345"})

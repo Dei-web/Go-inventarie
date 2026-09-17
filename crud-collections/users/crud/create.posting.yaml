@@ -1,0 +1,15 @@
+name: Create
+description: Create user
+method: POST
+url: http://localhost:8080/users
+body:
+  content: |-
+    {
+       "name": "Deilhers",
+        "email": "deilher4s@example.com",
+        "password": "123456782"
+      }
+  content_type: application/json
+headers:
+- name: content-type
+  value: application/json

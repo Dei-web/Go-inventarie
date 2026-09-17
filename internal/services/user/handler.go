@@ -21,6 +21,14 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// GetUsers godoc
+// @Summary      Obtener todos los usuarios
+// @Description  Retorna la lista de todos los usuarios
+// @Tags         users
+// @Produce      json
+// @Success      200  {array}   types.ResponseData
+// @Failure      500  {object}  httperr.HTTPError
+// @Router       /users [get]
 func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.service.GetAll(r.Context())
 	if err != nil {
@@ -32,6 +40,18 @@ func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+// CreateUser godoc
+// @Summary      Crear un usuario
+// @Description  Crea un nuevo usuario
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        user  body      types.UsersCreate  true  "Datos del usuario"
+// @Success      201   {object}  types.ResponseData
+// @Failure      400   {object}  httperr.HTTPError
+// @Failure      422   {object}  httperr.HTTPError
+// @Failure      500   {object}  httperr.HTTPError
+// @Router       /users [post]
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req types.UsersCreate
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -55,6 +75,17 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// GetUser godoc
+// @Summary      Obtener un usuario
+// @Description  Retorna un usuario por su ID
+// @Tags         users
+// @Produce      json
+// @Param        id   path      int  true  "ID del usuario"
+// @Success      200  {object}  types.ResponseData
+// @Failure      400  {object}  httperr.HTTPError
+// @Failure      404  {object}  httperr.HTTPError
+// @Failure      500  {object}  httperr.HTTPError
+// @Router       /users/{id} [get]
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	id, err := parseIDParam(r)
 	if err != nil {
@@ -76,6 +107,21 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// UpdateUser godoc
+// @Summary      Actualizar un usuario
+// @Description  Actualiza un usuario por su ID
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int                true  "ID del usuario"
+// @Param        user  body      types.UsersUpdate  true  "Datos a actualizar"
+// @Success      204   "No Content"
+// @Failure      400   {object}  httperr.HTTPError
+// @Failure      404   {object}  httperr.HTTPError
+// @Failure      422   {object}  httperr.HTTPError
+// @Failure      500   {object}  httperr.HTTPError
+// @Router       /users/{id} [put]
+// @Security     ApiKeyAuth
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	id, err := parseIDParam(r)
 	if err != nil {
@@ -105,6 +151,18 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DeleteUser godoc
+// @Summary      Eliminar un usuario
+// @Description  Elimina un usuario por su ID
+// @Tags         users
+// @Produce      json
+// @Param        id   path      int  true  "ID del usuario"
+// @Success      204  "No Content"
+// @Failure      400  {object}  httperr.HTTPError
+// @Failure      404  {object}  httperr.HTTPError
+// @Failure      500  {object}  httperr.HTTPError
+// @Router       /users/{id} [delete]
+// @Security     ApiKeyAuth
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	id, err := parseIDParam(r)
 	if err != nil {

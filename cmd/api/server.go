@@ -14,6 +14,7 @@ import (
 	"github.com/Dei-web/Go-inventarie/internal/middleware"
 	"github.com/Dei-web/Go-inventarie/internal/middleware/auth"
 	"github.com/Dei-web/Go-inventarie/internal/services/user"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/gorm"
 )
 
@@ -40,6 +41,13 @@ func (s *Server) Run() error {
 	authMw := auth.Middleware(s.config.JWTSecret)
 	mux.Handle("PUT /users/{id}", authMw(http.HandlerFunc(userHandler.UpdateUser)))
 	mux.Handle("DELETE /users/{id}", authMw(http.HandlerFunc(userHandler.DeleteUser)))
+
+	mux.Handle("/swagger/", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
+	mux.HandleFunc("GET /swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "docs/swagger.json")
+	})
 
 	var handler http.Handler = mux
 	handler = middleware.CORS(handler)
