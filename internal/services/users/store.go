@@ -15,11 +15,23 @@ func NewStore(db *gorm.DB) *Store {
 }
 
 func (s *Store) GetUsers() ([]types.ResponseData, error) {
-	var users []types.ResponseData
+	var users []types.Users
 
-	result := s.db.Find(&users)
+	if err := s.db.Find(&users).Error; err != nil {
+		return nil, err
+	}
 
-	return users, result.Error
+	response := make([]types.ResponseData, 0, len(users))
+
+	for _, user := range users {
+		response = append(response, types.ResponseData{
+			ID:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+		})
+	}
+
+	return response, nil
 }
 
 func (s *Store) CreateUser(data *types.UsersCreate) (*types.UsersCreate, error) {
