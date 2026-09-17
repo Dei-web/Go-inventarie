@@ -2,11 +2,10 @@ package main
 
 import (
 	"log"
-	"net/http"
 
+	"github.com/Dei-web/Go-inventarie/cmd/api"
 	"github.com/Dei-web/Go-inventarie/internal/config"
 	"github.com/Dei-web/Go-inventarie/internal/db"
-	"github.com/Dei-web/Go-inventarie/internal/services/users"
 )
 
 func main() {
@@ -20,13 +19,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	userStore := users.NewStore(database)
-	userHandler := users.NewHandler(userStore)
-
-	mux := http.NewServeMux()
-
-	users.RegisterRoutes(mux, userHandler)
-
-	log.Println("API running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	server := api.NewServer(cfg, database)
+	if err := server.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

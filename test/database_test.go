@@ -1,6 +1,7 @@
 package test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/Dei-web/Go-inventarie/internal/config"
@@ -11,6 +12,10 @@ import (
 func TestDatabaseConnection(t *testing.T) {
 	if err := godotenv.Load("../.env"); err != nil {
 		t.Fatal("No se pudo cargar .env:", err)
+	}
+
+	if os.Getenv("JWT_SECRET") == "" {
+		os.Setenv("JWT_SECRET", "test-secret")
 	}
 
 	cfg, err := config.Load()
