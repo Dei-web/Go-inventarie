@@ -15,6 +15,58 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/login": {
+            "post": {
+                "description": "Autentica un usuario y retorna un token JWT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Iniciar sesion",
+                "parameters": [
+                    {
+                        "description": "Credenciales de acceso",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httperr.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httperr.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/httperr.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "description": "Retorna la lista de todos los usuarios",
@@ -269,6 +321,32 @@ const docTemplate = `{
                 }
             }
         },
+        "types.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/types.ResponseData"
+                }
+            }
+        },
         "types.ResponseData": {
             "type": "object",
             "properties": {
@@ -332,7 +410,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{"http"},
 	Title:            "Go Inventarie API",
-	Description:      "API CRUD para gestión de usuarios",
+	Description:      "API para gestión Integral de inventario",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -181,6 +181,44 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Login godoc
+// @Summary      Iniciar sesion
+// @Description  Autentica un usuario y retorna un token JWT
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      types.LoginRequest  true  "Credenciales de acceso"
+// @Success      200          {object}  types.LoginResponse
+// @Failure      400          {object}  httperr.HTTPError
+// @Failure      401          {object}  httperr.HTTPError
+// @Failure      422          {object}  httperr.HTTPError
+// @Router       /login [post]
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var req types.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperr.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if err := validate.Struct(req); err != nil {
+		httperr.Unprocessable(w, "validation failed", err.Error())
+		return
+	}
+
+	resp, err := h.service.Login(r.Context(), &req)
+	if errors.Is(err, ErrInvalidCredentials) {
+		httperr.Unauthorized(w, "invalid email or password")
+		return
+	}
+	if err != nil {
+		httperr.Internal(w, "failed to login")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 func parseIDParam(r *http.Request) (int64, error) {
 	idStr := r.PathValue("id")
 	return strconv.ParseInt(idStr, 10, 64)

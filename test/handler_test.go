@@ -15,7 +15,7 @@ import (
 
 func setupHandler() (*user.Handler, *MockRepository) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 	handler := user.NewHandler(svc)
 	return handler, repo
 }
@@ -89,7 +89,7 @@ func TestHandlerGetUsers(t *testing.T) {
 
 	repo.Create(context.Background(), &models.Users{Name: "User 1", Email: "u1@test.com", Password: "hashed"})
 
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 	svc.Create(context.Background(), &types.UsersCreate{Name: "User 2", Email: "u2@test.com", Password: "pass12345"})
 
 	h = user.NewHandler(svc)
@@ -135,7 +135,7 @@ func TestHandlerDeleteUserInvalidID(t *testing.T) {
 func TestHandlerUpdateUser(t *testing.T) {
 	h, repo := setupHandler()
 
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 	created, _ := svc.Create(context.Background(), &types.UsersCreate{Name: "John", Email: "john@test.com", Password: "pass12345"})
 	h = user.NewHandler(svc)
 
@@ -155,5 +155,89 @@ func TestHandlerUpdateUser(t *testing.T) {
 	updated, _ := svc.GetByID(context.Background(), int64(created.ID))
 	if updated.Name != "Jane" {
 		t.Errorf("expected name %q, got %q", "Jane", updated.Name)
+	}
+}
+
+func TestHandlerLogin(t *testing.T) {
+	h, repo := setupHandler()
+
+	svc := user.NewService(repo, testJWTSecret)
+	svc.Create(context.Background(), &types.UsersCreate{
+		Name: "John", Email: "john@test.com", Password: "pass12345",
+	})
+	h = user.NewHandler(svc)
+
+	body := types.LoginRequest{Email: "john@test.com", Password: "pass12345"}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonBody))
+	w := httptest.NewRecorder()
+
+	h.Login(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp types.LoginResponse
+	json.NewDecoder(w.Body).Decode(&resp)
+
+	if resp.Token == "" {
+		t.Error("expected token to be set")
+	}
+
+	if resp.User.Name != "John" {
+		t.Errorf("expected name %q, got %q", "John", resp.User.Name)
+	}
+}
+
+func TestHandlerLoginInvalidBody(t *testing.T) {
+	h, _ := setupHandler()
+
+	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader([]byte("invalid")))
+	w := httptest.NewRecorder()
+
+	h.Login(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestHandlerLoginValidationFails(t *testing.T) {
+	h, _ := setupHandler()
+
+	body := types.LoginRequest{Email: "not-an-email", Password: ""}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonBody))
+	w := httptest.NewRecorder()
+
+	h.Login(w, req)
+
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("expected status %d, got %d", http.StatusUnprocessableEntity, w.Code)
+	}
+}
+
+func TestHandlerLoginInvalidCredentials(t *testing.T) {
+	h, repo := setupHandler()
+
+	svc := user.NewService(repo, testJWTSecret)
+	svc.Create(context.Background(), &types.UsersCreate{
+		Name: "John", Email: "john@test.com", Password: "pass12345",
+	})
+	h = user.NewHandler(svc)
+
+	body := types.LoginRequest{Email: "john@test.com", Password: "wrongpassword"}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonBody))
+	w := httptest.NewRecorder()
+
+	h.Login(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, w.Code)
 	}
 }

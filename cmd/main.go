@@ -10,7 +10,7 @@ import (
 
 // @title           Go Inventarie API
 // @version         1.0
-// @description     API CRUD para gestión de usuarios
+// @description     API para gestión Integral de inventario
 // @host            localhost:8080
 // @BasePath        /
 // @schemes         http

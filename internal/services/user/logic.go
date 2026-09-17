@@ -6,14 +6,16 @@ import (
 	"github.com/Dei-web/Go-inventarie/internal/middleware/auth"
 	"github.com/Dei-web/Go-inventarie/internal/models"
 	"github.com/Dei-web/Go-inventarie/internal/types"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
-	repo Repository
+	repo      Repository
+	jwtSecret string
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, jwtSecret string) *Service {
+	return &Service{repo: repo, jwtSecret: jwtSecret}
 }
 
 func (s *Service) GetAll(ctx context.Context) ([]types.ResponseData, error) {
@@ -86,4 +88,29 @@ func (s *Service) Update(ctx context.Context, id int64, req *types.UsersUpdate) 
 
 func (s *Service) Delete(ctx context.Context, id int64) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *Service) Login(ctx context.Context, req *types.LoginRequest) (*types.LoginResponse, error) {
+	user, err := s.repo.GetByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	token, err := auth.GenerateToken(user.ID, s.jwtSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.LoginResponse{
+		Token: token,
+		User: types.ResponseData{
+			ID:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+		},
+	}, nil
 }

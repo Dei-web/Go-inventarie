@@ -8,9 +8,11 @@ import (
 	"github.com/Dei-web/Go-inventarie/internal/types"
 )
 
+const testJWTSecret = "test-secret-key"
+
 func TestServiceCreateUser(t *testing.T) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 
 	req := &types.UsersCreate{
 		Name:     "John Doe",
@@ -38,7 +40,7 @@ func TestServiceCreateUser(t *testing.T) {
 
 func TestServiceGetAll(t *testing.T) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 
 	svc.Create(context.Background(), &types.UsersCreate{
 		Name: "User 1", Email: "user1@test.com", Password: "pass12345",
@@ -59,7 +61,7 @@ func TestServiceGetAll(t *testing.T) {
 
 func TestServiceGetByID(t *testing.T) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 
 	created, _ := svc.Create(context.Background(), &types.UsersCreate{
 		Name: "John", Email: "john@test.com", Password: "pass12345",
@@ -77,7 +79,7 @@ func TestServiceGetByID(t *testing.T) {
 
 func TestServiceGetByIDNotFound(t *testing.T) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 
 	_, err := svc.GetByID(context.Background(), 999)
 	if err != user.ErrUserNotFound {
@@ -87,7 +89,7 @@ func TestServiceGetByIDNotFound(t *testing.T) {
 
 func TestServiceUpdate(t *testing.T) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 
 	created, _ := svc.Create(context.Background(), &types.UsersCreate{
 		Name: "John", Email: "john@test.com", Password: "pass12345",
@@ -108,7 +110,7 @@ func TestServiceUpdate(t *testing.T) {
 
 func TestServiceDelete(t *testing.T) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 
 	created, _ := svc.Create(context.Background(), &types.UsersCreate{
 		Name: "John", Email: "john@test.com", Password: "pass12345",
@@ -127,10 +129,65 @@ func TestServiceDelete(t *testing.T) {
 
 func TestServiceDeleteNotFound(t *testing.T) {
 	repo := NewMockRepository()
-	svc := user.NewService(repo)
+	svc := user.NewService(repo, testJWTSecret)
 
 	err := svc.Delete(context.Background(), 999)
 	if err != user.ErrUserNotFound {
 		t.Errorf("expected ErrUserNotFound, got %v", err)
+	}
+}
+
+func TestServiceLogin(t *testing.T) {
+	repo := NewMockRepository()
+	svc := user.NewService(repo, testJWTSecret)
+
+	svc.Create(context.Background(), &types.UsersCreate{
+		Name: "John", Email: "john@test.com", Password: "pass12345",
+	})
+
+	resp, err := svc.Login(context.Background(), &types.LoginRequest{
+		Email:    "john@test.com",
+		Password: "pass12345",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if resp.Token == "" {
+		t.Error("expected token to be set")
+	}
+
+	if resp.User.Name != "John" {
+		t.Errorf("expected name %q, got %q", "John", resp.User.Name)
+	}
+}
+
+func TestServiceLoginInvalidEmail(t *testing.T) {
+	repo := NewMockRepository()
+	svc := user.NewService(repo, testJWTSecret)
+
+	_, err := svc.Login(context.Background(), &types.LoginRequest{
+		Email:    "nonexistent@test.com",
+		Password: "pass12345",
+	})
+	if err != user.ErrInvalidCredentials {
+		t.Errorf("expected ErrInvalidCredentials, got %v", err)
+	}
+}
+
+func TestServiceLoginInvalidPassword(t *testing.T) {
+	repo := NewMockRepository()
+	svc := user.NewService(repo, testJWTSecret)
+
+	svc.Create(context.Background(), &types.UsersCreate{
+		Name: "John", Email: "john@test.com", Password: "pass12345",
+	})
+
+	_, err := svc.Login(context.Background(), &types.LoginRequest{
+		Email:    "john@test.com",
+		Password: "wrongpassword",
+	})
+	if err != user.ErrInvalidCredentials {
+		t.Errorf("expected ErrInvalidCredentials, got %v", err)
 	}
 }

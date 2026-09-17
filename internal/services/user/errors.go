@@ -3,6 +3,7 @@ package user
 import "errors"
 
 var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrEmailAlreadyTaken = errors.New("email already taken")
+	ErrUserNotFound        = errors.New("user not found")
+	ErrEmailAlreadyTaken   = errors.New("email already taken")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
 )

@@ -36,6 +36,18 @@ func (s *Store) GetByID(ctx context.Context, id int64) (*models.Users, error) {
 	return &user, nil
 }
 
+func (s *Store) GetByEmail(ctx context.Context, email string) (*models.Users, error) {
+	var user models.Users
+	result := s.db.WithContext(ctx).Where("email = ?", email).First(&user)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
 func (s *Store) Create(ctx context.Context, user *models.Users) error {
 	return s.db.WithContext(ctx).Create(user).Error
 }

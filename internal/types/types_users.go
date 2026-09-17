@@ -17,3 +17,13 @@ type UsersUpdate struct {
 	Email    string `json:"email"    validate:"omitempty,email"`
 	Password string `json:"password" validate:"omitempty,min=8"`
 }
+
+type LoginRequest struct {
+	Email    string `json:"email"    validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+type LoginResponse struct {
+	Token string       `json:"token"`
+	User  ResponseData `json:"user"`
+}

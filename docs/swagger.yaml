@@ -9,6 +9,23 @@ definitions:
       message:
         type: string
     type: object
+  types.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  types.LoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/types.ResponseData'
+    type: object
   types.ResponseData:
     properties:
       email:
@@ -49,10 +66,44 @@ definitions:
 host: localhost:8080
 info:
   contact: {}
-  description: API CRUD para gestión de usuarios
+  description: API para gestión Integral de inventario
   title: Go Inventarie API
   version: "1.0"
 paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Autentica un usuario y retorna un token JWT
+      parameters:
+      - description: Credenciales de acceso
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/types.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/httperr.HTTPError'
+      summary: Iniciar sesion
+      tags:
+      - auth
   /users:
     get:
       description: Retorna la lista de todos los usuarios

@@ -58,6 +58,18 @@ func (m *MockRepository) GetByID(ctx context.Context, id int64) (*models.Users, 
 	return nil, user.ErrUserNotFound
 }
 
+func (m *MockRepository) GetByEmail(ctx context.Context, email string) (*models.Users, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	for _, u := range m.users {
+		if u.Email == email {
+			return &u, nil
+		}
+	}
+	return nil, user.ErrUserNotFound
+}
+
 func (m *MockRepository) Create(ctx context.Context, user *models.Users) error {
 	if m.createErr != nil {
 		return m.createErr

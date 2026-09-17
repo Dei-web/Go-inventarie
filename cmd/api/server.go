@@ -14,7 +14,6 @@ import (
 	"github.com/Dei-web/Go-inventarie/internal/middleware"
 	"github.com/Dei-web/Go-inventarie/internal/middleware/auth"
 	"github.com/Dei-web/Go-inventarie/internal/services/user"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/gorm"
 )
 
@@ -24,32 +23,71 @@ type Server struct {
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB) *Server {
-	return &Server{config: cfg, db: db}
+	return &Server{
+		config: cfg,
+		db:     db,
+	}
 }
 
 func (s *Server) Run() error {
 	userStore := user.NewStore(s.db)
-	userService := user.NewService(userStore)
+	userService := user.NewService(userStore, s.config.JWTSecret)
 	userHandler := user.NewHandler(userService)
 
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("POST /login", userHandler.Login)
 
 	mux.HandleFunc("GET /users", userHandler.GetUsers)
 	mux.HandleFunc("GET /users/{id}", userHandler.GetUser)
 	mux.HandleFunc("POST /users", userHandler.CreateUser)
 
 	authMw := auth.Middleware(s.config.JWTSecret)
-	mux.Handle("PUT /users/{id}", authMw(http.HandlerFunc(userHandler.UpdateUser)))
-	mux.Handle("DELETE /users/{id}", authMw(http.HandlerFunc(userHandler.DeleteUser)))
 
-	mux.Handle("/swagger/", httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"),
-	))
-	mux.HandleFunc("GET /swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle(
+		"PUT /users/{id}",
+		authMw(http.HandlerFunc(userHandler.UpdateUser)),
+	)
+
+	mux.Handle(
+		"DELETE /users/{id}",
+		authMw(http.HandlerFunc(userHandler.DeleteUser)),
+	)
+
+	// Scalar API documentation.
+	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		const html = `<!doctype html>
+<html>
+<head>
+	<title>Go Inventarie API</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+	<div id="app"></div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+
+	<script>
+		Scalar.createApiReference('#app', {
+			url: '/docs/openapi.json'
+		})
+	</script>
+</body>
+</html>`
+
+		_, _ = w.Write([]byte(html))
+	})
+
+	// OpenAPI specification consumed by Scalar.
+	mux.HandleFunc("GET /docs/openapi.json", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "docs/swagger.json")
 	})
 
 	var handler http.Handler = mux
+
 	handler = middleware.CORS(handler)
 	handler = middleware.Logging(handler)
 	handler = middleware.Recovery(handler)
@@ -68,7 +106,11 @@ func (s *Server) Run() error {
 		<-sigChan
 
 		log.Println("shutting down server...")
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+
+		ctx, cancel := context.WithTimeout(
+			context.Background(),
+			30*time.Second,
+		)
 		defer cancel()
 
 		if err := srv.Shutdown(ctx); err != nil {
@@ -76,11 +118,17 @@ func (s *Server) Run() error {
 		}
 	}()
 
-	log.Printf("API running on :%s [%s]", s.config.Port, s.config.Environment)
+	log.Printf(
+		"API running on :%s [%s]",
+		s.config.Port,
+		s.config.Environment,
+	)
+
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}
 
 	log.Println("server stopped gracefully")
+
 	return nil
 }
